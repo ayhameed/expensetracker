@@ -19,16 +19,15 @@ app.use(express.json())
 
 const posts = []
 
-//root route method , rendering posts[] on home page
+//root/login route method , rendering posts[] on home page
 app.get('/', (req, res) => {
   res.render('login')
 })
 
-
-
-
-
-
+//Signup route
+app.get('/signup', (req, res) =>{
+    res.render('signup')
+})
 
 // app .listen
 app.listen(3000, () => {
