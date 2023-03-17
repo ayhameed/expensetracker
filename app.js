@@ -6,6 +6,7 @@ const flash = require('connect-flash');
 const passport = require('passport');
 const LocalStrategy = require('passport-local').Strategy;
 const User = require('./models/user');
+const bcrypt = require('bcrypt');
 
 const app = express();
 
@@ -85,6 +86,19 @@ app.get('/signup', (req, res) => {
   res.render('signup');
 });
 
+// signup post method
+app.post('/signup', async (req, res) => {
+    const { email, password } = req.body;
+    try {
+      const user = new User({ email, password });
+      await user.save();
+      res.redirect('/login');
+    } catch (error) {
+      console.log(error);
+      res.redirect('/signup');
+    }
+  });
+  
 // dashboard route
 app.get('/dashboard', (req, res) => {
   res.render('dashboard');
