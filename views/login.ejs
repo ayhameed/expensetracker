@@ -1,9 +1,25 @@
 <!-- include main-header for unauthenticated users -->
 <%- include('partials/main-header.ejs') %>
+    <div class="container">
+        <!-- container holding title-->
+        <div class="row">
+            <div class="col s12">
+                <h4 class="center">The best way to track <br> expenses</h4>
+                <h6 class="center">Get Started</h6>
+            </div>
+        </div>
 
-
-
-
-
-<!-- include main-header for all users -->
+        <!-- container holding login form-->
+        <div class="row">
+            <div class="col l4"></div>
+            <div class="col l4">
+                <%- include('partials/login-form.ejs') %>
+            </div>
+            <div class="col l4">
+                <p class="left" style="font-size: 14px !important; font-weight:600;"><a href="/signup">No
+                        account?<br>Signup</a></p>
+            </div>
+        </div>
+    </div>
+    <!-- include main-header for all users -->
 <%- include('partials/footer.ejs') %>

@@ -1,0 +1,15 @@
+<!-- include main-header for unauthenticated users -->
+<%- include('partials/main-header.ejs') %>
+
+    <!-- container holding login form-->
+    <div class="row" style="margin-top:40px;">
+        <div class="col l4">
+            <p class="right" style="font-size: 40px !important; font-weight:500;">SignUp <br> to get<br> started</p>
+        </div>
+        <div class="col l6">
+            <%- include('partials/signup-form.ejs') %>
+        </div>
+    </div>
+
+    <!-- include main-header for all users -->
+    <%- include('partials/footer.ejs') %>

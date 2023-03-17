@@ -8,3 +8,8 @@ body {
     width: 100%;
     text-align: center;
 }
+
+form {
+    border: 1px solid #a1c6eb;
+    box-shadow: 5px 5px #a1c6eb; 
+}
