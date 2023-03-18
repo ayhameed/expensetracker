@@ -13,7 +13,7 @@ const app = express();
 
 // connect to mongodb
 const mongoose = require('mongoose');
-mongoose.connect('mongodb://localhost:27017/expenseDB').then(() => console.log('connected to db'));
+mongoose.connect('mongodb://localhost:27017/expenseDB').then(() => console.log('Connected to MongoDB')).catch(err => console.error('Error connecting to MongoDB:', err));
 
 // set view engine
 app.set('view engine', 'ejs');
@@ -22,8 +22,6 @@ app.set('view engine', 'ejs');
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static('public'));
-
-app.use(express.json())
 
 // encrypt password
 function encrypt(text) {
@@ -44,11 +42,18 @@ function decrypt(text) {
     decrypted = Buffer.concat([decrypted, decipher.final()]);
     return decrypted.toString();
 }
+
 const usersSchema = new mongoose.Schema({
     email: String,
     password: String
 });
+
 const users = mongoose.model('users', usersSchema);
+
+// handle database connection errors
+mongoose.connection.on('error', err => {
+    console.error('Error connecting to MongoDB:', err);
+});
 
 // login route
 app.get('/', (req, res) => {
@@ -67,56 +72,47 @@ app.post('/', async (req, res) => {
         const user = await users.findOne({ email: lowercaseEmail }).exec();
         if (!user) {
             console.log('User not found');
+            res.redirect('/');
             return;
         }
-        if (user) {
+        // fetch password from db and map to variable
+        const encryptedPassword = user.password
 
-            // fetch password from db and map tp variable
-            console.log("encrypted passowrd",user.password)
-            encryptedPassword = user.password
+        // decrypt password for comparison
+        const decryptedPassword = decrypt(encryptedPassword)
 
-            // decrypt password for comparisom
-            const decryptedPassword = decrypt(encryptedPassword)
-            console.log("decrypted  passowrd",decryptedPassword)
-            if (password == decryptedPassword) {
-                res.redirect('/dashboard');
-            } else {
-                res.redirect('/');
-                console.log('Incorrect password');
-            }
+        if (password == decryptedPassword) {
+            res.redirect('/dashboard');
+        } else {
+            res.redirect('/');
+            console.log('Incorrect password');
         }
     } catch (err) {
-        console.log('Error finding user:', err);
+        console.error('Error finding user:', err);
+        res.status(500).send('Internal server error');
     }
 });
 
 // signup route
 app.get('/signup', (req, res) => {
     res.render('signup');
-})
+});
 
 // signup post method
-app.post('/signup', (req, res) => {
-    const email = req.body.email
+app.post('/signup', async (req, res) => {
+    const email = _.toLower(req.body.email); //convert email to lower case
+    const password = req.body.password;
 
-    //convert email to lower case
-    _.toLower(email)
-    
-    const password = req.body.password
-    console.log("Password:", password);
-
-    const encryptedPassword = encrypt(password);
-   
-    // map variables to user schema
-    const user = new users({
-        email: email,
-        password: encryptedPassword
-
-    });
-
-    // save user to db
-    user.save()
-    res.redirect('/dashboard')
+    try {
+        const user = await users.create({
+            email: email,
+            password: encrypt(password)
+        });
+        res.redirect('/dashboard');
+    } catch (err) {
+        console.error('Error creating user:', err);
+        res.status(500).send('Internal server error');
+    }
 });
 
 // dashboard route
@@ -125,6 +121,4 @@ app.get('/dashboard', (req, res) => {
 });
 
 // app.listen
-app.listen(3000, () => {
-    console.log('Server started on port 3000');
-});
+app.listen(3000, () => { console.log('Server started on port 3000') });
