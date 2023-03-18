@@ -3,3 +3,4 @@ generate_secrete_key.js
 db.js
 useerModel.js
 passportConfig.js
+.env
