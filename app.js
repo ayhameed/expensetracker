@@ -1,30 +1,48 @@
-require('dotenv').config();
 const express = require('express');
 const ejs = require('ejs');
 const passport = require('passport');
 const LocalStrategy = require('passport-local');
-const crypto = require('crypto');
 const jwt = require('jsonwebtoken')
-const bodyparser = require('body-parser');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const db = require('./db');
 const users = require('./userModel');
-const _ = require('lodash');
 
 const app = express();
+const port = process.env.PORT || 3000;
 
 // connect to mongodb
-const db = require('./db');
 db.connect();
 
 // set view engine
 app.set('view engine', 'ejs');
 
 // middlewares
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(express.static('public'));
+app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cors());
 
 // passport config
 require('./passportConfig')(passport);
+
+// to protect route
+function authMiddleware(req, res, next) {
+    passport.authenticate('jwt', { session: false }, (err, user, info) => {
+        if (err) {
+            return res.status(401).json({
+                message: 'Unauthorized'
+            });
+        }
+        if (!user) {
+            return res.status(401).json({
+                message: 'Unauthorized'
+            });
+        }
+        req.user = user;
+        next();
+    })(req, res, next);
+}
 
 // login route
 app.get('/', (req, res) => {
@@ -33,7 +51,7 @@ app.get('/', (req, res) => {
 
 //login post method
 app.post(
-    "/",
+    "/login",
     (req, res, next) => {
         passport.authenticate('local-login', { session: false }, (err, user, info) => {
             if (err || !user) {
@@ -47,21 +65,12 @@ app.post(
                     return next(err);
                 }
                 // login successful, generate JWT
-                jwt.sign({ user: user }, process.env.SECRET_KEY, { expiresIn: '1h' }, (err, token) => {
-                    if (err) {
-                        return res.status(401).json({
-                            message: "Failed to login",
-                            token: null,
-                        });
-                    }
-                    // redirect to dashboard with JWT token
-                    return res.redirect('/dashboard?token=' + token);
-                });
+                const token = jwt.sign({ user: user }, process.env.SECRET_KEY, { expiresIn: '1h' });
+                return res.json({ token });
             });
         })(req, res);
     }
 );
-
 
 // signup route
 app.get('/signup', (req, res) => {
@@ -77,7 +86,48 @@ app.post(
     }
 );
 
+// add expense route
+app.post('/add-expense', authMiddleware, async (req, res) => {
+    try {
+        const { title, amount } = req.body;
+        const user = req.user;
+        const expense = await users.addExpense(user._id, title, amount);
+        return res.status(200).json(expense);
+    } catch (error) {
+        return res.status(500).json({
+            message: 'Error adding expense'
+        });
+    }
+});
+
+// Dashboard route
+app.post(
+    '/signup',
+    async (req, res, next) => {
+        try {
+            const { email, password } = req.body;
+            // check if user exists
+            const userExists = await User.findOne({ "email": email });
+            if (userExists) {
+                return res.status(401).json({
+                    message: "User with email already exists",
+                });
+            }
+            // Create a new user with the user data provided
+            const user = await User.create({ email, password });
+            // generate JWT
+            const token = jwt.sign({ user: user }, process.env.SECRET_KEY, { expiresIn: '1h' });
+            return res.status(200).json({
+                message: "Signup successful",
+                token,
+            });
+        } catch (error) {
+            next(error);
+        }
+    }
+);
+
 // app.listen
-app.listen(process.env.PORT, () => {
-    console.log('Server started on port 3000');
+app.listen(port, () => {
+    console.log(`Server started on port ${port}`);
 });
