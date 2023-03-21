@@ -8,6 +8,7 @@ const cors = require('cors');
 
 const db = require('./db');
 const users = require('./userModel');
+const expense = require('./expenseModel');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -52,22 +53,22 @@ app.get('/', (req, res) => {
 
 //login post method
 app.post(
-    "/login",
+    "/",
     (req, res, next) => {
         passport.authenticate('local-login', { session: false }, (err, user, info) => {
             if (err || !user) {
                 return res.status(401).json({
                     message: "Failed to login",
-                    token: null,
                 });
             }
             req.login(user, { session: false }, (err) => {
                 if (err) {
                     return next(err);
                 }
-                // login successful, generate JWT
-                const token = jwt.sign({ user: user }, process.env.SECRET_KEY, { expiresIn: '1h' });
-                return res.json({ token });
+                return res.json({ 
+                    userObj: user,
+                    message: "Login Successful" 
+                })
             });
         })(req, res);
     }
@@ -78,17 +79,39 @@ app.get('/signup', (req, res) => {
     res.render('signup');
 });
 
-// signup post method
+//signup post method
 app.post(
     '/signup',
-    passport.authenticate('local-signup', { session: false }),
-    (req, res, next) => {
-        res.redirect('/dashboard');
+    async (req, res, next) => {
+        try {
+            const { email, password } = req.body;
+            // check if user exists
+            const userExists = await users.findOne({ "email": email });
+            if (userExists) {
+                return res.status(401).json({
+                    message: "User with email already exists",
+                });
+            }
+            // Create a new user with the user data provided
+            const user = await users.create({ email, password });
+
+            return res.status(200).json({
+                userObj: user,
+                message: "Signup successful",
+            });
+        } catch (error) {
+            next(error);
+        }
     }
 );
 
+app.get('/dashboard', (req, res) => {
+    res.render('dashboard')
+})
+// Dashboard route
+
 // add expense route
-app.post('/add-expense', authMiddleware, async (req, res) => {
+app.post('/add-expense', async (req, res) => {
     try {
         const { title, amount } = req.body;
         const user = req.user;
@@ -101,35 +124,13 @@ app.post('/add-expense', authMiddleware, async (req, res) => {
     }
 });
 
-app.get('/dashboard',(req, res)=>{
-    res.render('dashboard')
-})
-// Dashboard route
-app.post(
-    '/signup',
-    async (req, res, next) => {
-        try {
-            const { email, password } = req.body;
-            // check if user exists
-            const userExists = await User.findOne({ "email": email });
-            if (userExists) {
-                return res.status(401).json({
-                    message: "User with email already exists",
-                });
-            }
-            // Create a new user with the user data provided
-            const user = await User.create({ email, password });
-            // generate JWT
-            const token = jwt.sign({ user: user }, process.env.SECRET_KEY, { expiresIn: '1h' });
-            return res.status(200).json({
-                message: "Signup successful",
-                token,
-            });
-        } catch (error) {
-            next(error);
-        }
-    }
-);
+
+// logout route 
+app.get('/logout', function (req, res) {
+    req.logout();
+    res.sendStatus({ message: 'Successfully logged out.' });
+
+});
 
 // app.listen
 app.listen(port, () => {
