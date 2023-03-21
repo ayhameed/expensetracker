@@ -12,5 +12,4 @@ The following packages are dependencies
     "mongoose": "^7.0.2",
     "nodemon": "^2.0.21"
   }
-
 }
